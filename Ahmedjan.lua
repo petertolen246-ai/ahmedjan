@@ -1,3 +1,370 @@
+-- ╔══════════════════════════════════════════════════════╗
+-- ║           AHMEDJAN KEY SYSTEM v2.0                  ║
+-- ║   HWID-привязка • Срок действия • GitHub Gist       ║
+-- ╚══════════════════════════════════════════════════════╝
+--
+-- КАК НАСТРОИТЬ:
+--   1. Создай GitHub Gist на https://gist.github.com
+--      Файл назови: keys.json  Содержимое: {}
+--   2. Скопируй ссылку на raw (кнопка "Raw") и вставь в KEYS_URL ниже
+--   3. Запускай генератор ключей (keygen.py) — он сам обновит Gist
+--   4. Готово!
+-- ─────────────────────────────────────────────────────────────────────────────
+
+do
+    -- ╔═ КОНФИГ (ЗАМЕНИ ЭТИ ЗНАЧЕНИЯ) ════════════════════════════════════════╗
+    local KEYS_URL  = "https://gist.githubusercontent.com/petertolen246-ai/6ee5153a8f06cb998d7e816fc76813e4/raw/keys.json"
+    local SAVE_FILE = "ahmedjan_key.txt"  -- сохраняется в папке эксплойта
+    -- ╚═══════════════════════════════════════════════════════════════════════╝
+
+    local HttpService      = game:GetService("HttpService")
+    local Players          = game:GetService("Players")
+    local TweenService     = game:GetService("TweenService")
+    local localPlayer      = Players.LocalPlayer
+
+    -- ── HWID: берём реальный идентификатор устройства если доступен ──────────
+    local function getHWID()
+        -- Современные эксплойты (Wave, Solara, Xeno и др.) дают getdeviceid()
+        if type(getdeviceid) == "function" then
+            local ok, id = pcall(getdeviceid)
+            if ok and id and id ~= "" then return tostring(id) end
+        end
+        -- Synapse X / старые эксплойты
+        if syn and syn.request then
+            local ok, id = pcall(function()
+                return tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+            end)
+            if ok and id and id ~= "" then return id end
+        end
+        -- Универсальный запасной: хэш из userId + имя компьютера (если есть)
+        local base = tostring(localPlayer.UserId)
+        if type(getexecutorname) == "function" then
+            base = base .. tostring(getexecutorname())
+        end
+        -- Простой djb2-хэш чтобы не хранить userId напрямую
+        local hash = 5381
+        for i = 1, #base do
+            hash = ((hash * 33) + string.byte(base, i)) % 0xFFFFFFFF
+        end
+        return string.format("FALLBACK-%X", hash)
+    end
+
+    -- ── Файловая система эксплойта ────────────────────────────────────────────
+    local function fsRead(path)
+        if type(readfile) == "function" then
+            local ok, data = pcall(readfile, path)
+            if ok and data and data ~= "" then return data end
+        end
+        return nil
+    end
+
+    local function fsWrite(path, data)
+        if type(writefile) == "function" then
+            pcall(writefile, path, data)
+        end
+    end
+
+    -- ── Загрузка таблицы ключей с GitHub Gist ────────────────────────────────
+    local function fetchKeys()
+        local ok, raw = pcall(game.HttpGet, game, KEYS_URL, true)
+        if not ok or not raw then
+            return nil, "Не удалось подключиться к серверу ключей."
+        end
+        local ok2, tbl = pcall(HttpService.JSONDecode, HttpService, raw)
+        if not ok2 or type(tbl) ~= "table" then
+            return nil, "Ошибка чтения базы ключей."
+        end
+        return tbl, nil
+    end
+
+    -- ── Форматирование оставшегося времени ───────────────────────────────────
+    local function fmtExpiry(expires)
+        if expires == 0 then return "∞ бессрочный" end
+        local left = expires - os.time()
+        if left <= 0 then return "истёк" end
+        local d = math.floor(left / 86400)
+        local h = math.floor((left % 86400) / 3600)
+        local m = math.floor((left % 3600) / 60)
+        if d > 0 then return d .. "д " .. h .. "ч" end
+        if h > 0 then return h .. "ч " .. m .. "м" end
+        return m .. "м " .. (left % 60) .. "с"
+    end
+
+    -- ── GUI ───────────────────────────────────────────────────────────────────
+    local verified     = false
+    local verifySignal = Instance.new("BindableEvent")
+
+    local function buildGui(onSubmit)
+        -- Удаляем старый gui если есть
+        local old = game:GetService("CoreGui"):FindFirstChild("AhmedjanKS")
+        if old then old:Destroy() end
+
+        local sg = Instance.new("ScreenGui")
+        sg.Name            = "AhmedjanKS"
+        sg.ResetOnSpawn    = false
+        sg.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+        sg.DisplayOrder    = 999
+        sg.Parent          = game:GetService("CoreGui")
+
+        -- Затемнение фона
+        local overlay = Instance.new("Frame", sg)
+        overlay.Size            = UDim2.new(1, 0, 1, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        overlay.BackgroundTransparency = 0.45
+        overlay.BorderSizePixel = 0
+
+        -- Главное окно
+        local win = Instance.new("Frame", sg)
+        win.Size             = UDim2.new(0, 420, 0, 220)
+        win.Position         = UDim2.new(0.5, -210, 0.5, -110)
+        win.BackgroundColor3 = Color3.fromRGB(13, 13, 20)
+        win.BorderSizePixel  = 0
+        Instance.new("UICorner", win).CornerRadius = UDim.new(0, 12)
+
+        -- Градиентная полоса сверху
+        local bar = Instance.new("Frame", win)
+        bar.Size             = UDim2.new(1, 0, 0, 4)
+        bar.BackgroundColor3 = Color3.fromRGB(100, 120, 255)
+        bar.BorderSizePixel  = 0
+        local barGrad = Instance.new("UIGradient", bar)
+        barGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB(100, 120, 255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180,  80, 255)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(100, 120, 255)),
+        })
+        local barCorner = Instance.new("UICorner", bar)
+        barCorner.CornerRadius = UDim.new(0, 4)
+
+        -- Анимация градиента
+        task.spawn(function()
+            local offset = 0
+            while win and win.Parent do
+                offset = (offset + 0.005) % 1
+                barGrad.Offset = Vector2.new(offset, 0)
+                task.wait()
+            end
+        end)
+
+        -- Заголовок
+        local title = Instance.new("TextLabel", win)
+        title.Size             = UDim2.new(1, 0, 0, 44)
+        title.Position         = UDim2.new(0, 0, 0, 4)
+        title.BackgroundTransparency = 1
+        title.Text             = "🔑  AHMEDJAN KEY SYSTEM"
+        title.TextColor3       = Color3.fromRGB(255, 255, 255)
+        title.Font             = Enum.Font.GothamBold
+        title.TextSize         = 17
+
+        -- Подзаголовок
+        local sub = Instance.new("TextLabel", win)
+        sub.Size               = UDim2.new(1, -30, 0, 18)
+        sub.Position           = UDim2.new(0, 15, 0, 52)
+        sub.BackgroundTransparency = 1
+        sub.Text               = "Введи ключ доступа для продолжения"
+        sub.TextColor3         = Color3.fromRGB(140, 140, 170)
+        sub.Font               = Enum.Font.Gotham
+        sub.TextSize           = 12
+        sub.TextXAlignment     = Enum.TextXAlignment.Left
+
+        -- Поле ввода
+        local inputBg = Instance.new("Frame", win)
+        inputBg.Size             = UDim2.new(1, -30, 0, 42)
+        inputBg.Position         = UDim2.new(0, 15, 0, 76)
+        inputBg.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+        inputBg.BorderSizePixel  = 0
+        Instance.new("UICorner", inputBg).CornerRadius = UDim.new(0, 8)
+
+        local inputBox = Instance.new("TextBox", inputBg)
+        inputBox.Size              = UDim2.new(1, -16, 1, 0)
+        inputBox.Position          = UDim2.new(0, 8, 0, 0)
+        inputBox.BackgroundTransparency = 1
+        inputBox.Text              = ""
+        inputBox.PlaceholderText   = "AHMD-XXXX-YYYY-ZZZZ"
+        inputBox.TextColor3        = Color3.fromRGB(255, 255, 255)
+        inputBox.PlaceholderColor3 = Color3.fromRGB(80, 80, 110)
+        inputBox.Font              = Enum.Font.Code
+        inputBox.TextSize          = 15
+        inputBox.ClearTextOnFocus  = false
+        inputBox.TextXAlignment    = Enum.TextXAlignment.Left
+
+        -- Статус
+        local status = Instance.new("TextLabel", win)
+        status.Size               = UDim2.new(1, -30, 0, 18)
+        status.Position           = UDim2.new(0, 15, 0, 124)
+        status.BackgroundTransparency = 1
+        status.Text               = ""
+        status.TextColor3         = Color3.fromRGB(255, 80, 80)
+        status.Font               = Enum.Font.Gotham
+        status.TextSize           = 12
+        status.TextXAlignment     = Enum.TextXAlignment.Left
+
+        -- Кнопка
+        local btn = Instance.new("TextButton", win)
+        btn.Size             = UDim2.new(1, -30, 0, 38)
+        btn.Position         = UDim2.new(0, 15, 0, 148)
+        btn.BackgroundColor3 = Color3.fromRGB(80, 100, 255)
+        btn.Text             = "Войти"
+        btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+        btn.Font             = Enum.Font.GothamBold
+        btn.TextSize         = 15
+        btn.BorderSizePixel  = 0
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+        local btnGrad = Instance.new("UIGradient", btn)
+        btnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 120, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(160,  80, 255)),
+        })
+        btnGrad.Rotation = 90
+
+        -- Hover эффект
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.fromRGB(110, 130, 255)
+            }):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.fromRGB(80, 100, 255)
+            }):Play()
+        end)
+
+        -- Обработчик кнопки
+        btn.MouseButton1Click:Connect(function()
+            local key = inputBox.Text:gsub("%s+", ""):upper()
+            if key == "" then
+                status.TextColor3 = Color3.fromRGB(255, 160, 40)
+                status.Text = "⚠ Введи ключ!"
+                return
+            end
+            btn.Active = false
+            btn.Text   = "Проверяем..."
+            status.Text = ""
+
+            task.spawn(function()
+                local ok, msg, extra = onSubmit(key)
+                if ok then
+                    status.TextColor3 = Color3.fromRGB(80, 255, 120)
+                    status.Text = "✅ " .. (msg or "Доступ разрешён!")
+                    if extra then
+                        sub.Text = "⏱ Действует ещё: " .. extra
+                        sub.TextColor3 = Color3.fromRGB(80, 200, 120)
+                    end
+                    task.wait(1.2)
+                    -- Плавное исчезновение
+                    TweenService:Create(sg, TweenInfo.new(0.4), {}):Play()
+                    task.wait(0.4)
+                    sg:Destroy()
+                else
+                    status.TextColor3 = Color3.fromRGB(255, 80, 80)
+                    status.Text = "❌ " .. (msg or "Неверный ключ.")
+                    btn.Text   = "Войти"
+                    btn.Active = true
+                end
+            end)
+        end)
+
+        -- Enter = нажать кнопку
+        inputBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then btn.MouseButton1Click:Fire() end
+        end)
+    end
+
+    -- ── Проверка ключа ────────────────────────────────────────────────────────
+    local function verify(inputKey)
+        if not inputKey or inputKey == "" then
+            return false, "Ключ пустой.", nil
+        end
+
+        local hwid = getHWID()
+        local now  = os.time()
+
+        local keys, err = fetchKeys()
+        if not keys then
+            return false, err or "Нет подключения.", nil
+        end
+
+        local entry = keys[inputKey]
+        if not entry then
+            return false, "Ключ не найден в базе.", nil
+        end
+
+        -- Срок действия
+        local exp = tonumber(entry.expires) or 0
+        if exp ~= 0 and now > exp then
+            return false, "Срок действия ключа истёк.", nil
+        end
+
+        -- HWID-привязка:
+        -- Если hwid в записи пустой — ключ ещё не привязан.
+        -- Пользователь сам должен попросить тебя привязать его HWID в keys.json
+        -- (или используй keygen.py чтобы сразу указать hwid при генерации).
+        local boundHwid = tostring(entry.hwid or "")
+        if boundHwid ~= "" and boundHwid ~= hwid then
+            return false, "HWID не совпадает. Ключ привязан к другому ПК.", nil
+        end
+
+        -- Всё ок
+        fsWrite(SAVE_FILE, inputKey)
+        return true, "Добро пожаловать!", fmtExpiry(exp)
+    end
+
+    -- ── Запуск ───────────────────────────────────────────────────────────────
+    -- 1) Пробуем сохранённый ключ (тихо, без GUI)
+    local ok_saved, saved = pcall(fsRead, SAVE_FILE)
+    if ok_saved and saved and saved:gsub("%s+","") ~= "" then
+        saved = saved:gsub("%s+", ""):upper()
+        local ok, msg, extra = verify(saved)
+        if ok then
+            print("[AhmedjanKS] ✅ Авто-вход | " .. (extra or "бессрочный"))
+            verified = true
+        else
+            warn("[AhmedjanKS] Сохранённый ключ невалиден: " .. tostring(msg))
+            pcall(fsWrite, SAVE_FILE, "")
+        end
+    end
+
+    -- 2) Если не вошли — показываем GUI и ждём
+    if not verified then
+        -- Показываем GUI через task.spawn чтобы не блокировать рендер
+        task.spawn(function()
+            local ok_gui, err_gui = pcall(buildGui, function(key)
+                local ok, msg, extra = verify(key)
+                if ok then
+                    verified = true
+                    pcall(function() verifySignal:Fire() end)
+                end
+                return ok, msg, extra
+            end)
+            if not ok_gui then
+                warn("[AhmedjanKS] Ошибка GUI: " .. tostring(err_gui))
+                -- Fallback: ввод через консоль эксплойта
+                while not verified do
+                    task.wait(0.5)
+                end
+            end
+        end)
+
+        -- Ждём пока пользователь введёт правильный ключ
+        local timeout = 0
+        repeat
+            task.wait(0.1)
+            timeout = timeout + 0.1
+        until verified or timeout > 300 -- 5 минут максимум
+
+        if not verified then
+            error("[AhmedjanKS] Время ожидания ключа истекло.")
+        end
+    end
+
+    pcall(function() verifySignal:Destroy() end)
+    -- Дальше скрипт продолжается только с валидным ключом
+end
+
+-- ══════════════════════════════════════════════════════════════════════════════
+--  Основной скрипт (запускается только после успешной проверки ключа)
+-- ══════════════════════════════════════════════════════════════════════════════
+
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 local DEFAULT_PALETTE = "Neverlose"
 local DEFAULT_RADIUS = 14
