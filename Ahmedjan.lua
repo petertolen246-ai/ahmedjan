@@ -1,5 +1,5 @@
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
-local DEFAULT_PALETTE = "Crimson"
+local DEFAULT_PALETTE = "Neverlose"
 local DEFAULT_RADIUS = 14
 
 local AhmedjanFunctions = {}
@@ -12563,11 +12563,11 @@ ThemeManager:SetLibrary(Library)
 ThemeManager:SetFolder("AhmedjanSettings")
 
 ThemeManager:SetDefaultTheme({
-    FontColor = "#F4F7FB",
-    MainColor = "#161A20",
-    AccentColor = "#B01E1E",
-    BackgroundColor = "#101319",
-    OutlineColor = "#1A2028",
+    FontColor = "#E0E0E8",
+    MainColor = "#111114",
+    AccentColor = "#4191FF",
+    BackgroundColor = "#0D0D10",
+    OutlineColor = "#2A2A35",
     FontFace = Enum.Font.Gotham,
 })
 
@@ -14954,21 +14954,26 @@ local function applyPalette(mode)
         Library.Scheme.MainColor = Color3.fromRGB(22, 14, 14)
         Library.Scheme.OutlineColor = Color3.fromRGB(60, 20, 20)
         Library.Scheme.AccentColor = Color3.fromRGB(176, 30, 30)
+    elseif mode == "Neverlose" then
+        Library.Scheme.BackgroundColor = Color3.fromRGB(13, 13, 16)
+        Library.Scheme.MainColor = Color3.fromRGB(17, 17, 20)
+        Library.Scheme.OutlineColor = Color3.fromRGB(42, 42, 53)
+        Library.Scheme.AccentColor = Color3.fromRGB(65, 145, 255)
     elseif mode == "Slate" then
-        Library.Scheme.BackgroundColor = Color3.fromRGB(16, 19, 25)
-        Library.Scheme.MainColor = Color3.fromRGB(22, 26, 33)
-        Library.Scheme.OutlineColor = Color3.fromRGB(27, 33, 42)
-        Library.Scheme.AccentColor = Color3.fromRGB(176, 30, 30)
+        Library.Scheme.BackgroundColor = Color3.fromRGB(13, 13, 16)
+        Library.Scheme.MainColor = Color3.fromRGB(17, 17, 20)
+        Library.Scheme.OutlineColor = Color3.fromRGB(42, 42, 53)
+        Library.Scheme.AccentColor = Color3.fromRGB(65, 145, 255)
     elseif mode == "Smoke" then
-        Library.Scheme.BackgroundColor = Color3.fromRGB(18, 20, 24)
-        Library.Scheme.MainColor = Color3.fromRGB(27, 30, 36)
-        Library.Scheme.OutlineColor = Color3.fromRGB(32, 36, 43)
-        Library.Scheme.AccentColor = Color3.fromRGB(176, 30, 30)
+        Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 18)
+        Library.Scheme.MainColor = Color3.fromRGB(20, 20, 24)
+        Library.Scheme.OutlineColor = Color3.fromRGB(45, 45, 55)
+        Library.Scheme.AccentColor = Color3.fromRGB(65, 145, 255)
     elseif mode == "Night" then
-        Library.Scheme.BackgroundColor = Color3.fromRGB(13, 15, 20)
-        Library.Scheme.MainColor = Color3.fromRGB(18, 21, 28)
-        Library.Scheme.OutlineColor = Color3.fromRGB(24, 29, 37)
-        Library.Scheme.AccentColor = Color3.fromRGB(176, 30, 30)
+        Library.Scheme.BackgroundColor = Color3.fromRGB(10, 10, 13)
+        Library.Scheme.MainColor = Color3.fromRGB(14, 14, 17)
+        Library.Scheme.OutlineColor = Color3.fromRGB(35, 35, 45)
+        Library.Scheme.AccentColor = Color3.fromRGB(65, 145, 255)
     end
 
     Library:UpdateColorsUsingRegistry()
@@ -15007,7 +15012,7 @@ end
 
 SurfaceBox:AddDropdown("SurfacePreset", {
     Text = "Palette",
-    Values = { "Crimson", "Slate", "Smoke", "Night" },
+    Values = { "Neverlose", "Crimson", "Slate", "Smoke", "Night" },
     Default = DEFAULT_PALETTE,
     Callback = function(Value)
         applyPalette(Value)
@@ -15053,7 +15058,7 @@ SettingsBox:AddSlider("ManualCornerRadius", {
 
 SettingsBox:AddDropdown("QuickPalette", {
     Text = "Quick palette",
-    Values = { "Crimson", "Slate", "Smoke", "Night" },
+    Values = { "Neverlose", "Crimson", "Slate", "Smoke", "Night" },
     Default = DEFAULT_PALETTE,
     Callback = function(Value)
         applyPalette(Value)
@@ -15064,7 +15069,7 @@ SettingsBox:AddDropdown("QuickPalette", {
 })
 
 local HUD_LOGO_IMAGE = "rbxassetid://87878776126707"
-local HUD_STYLE = "Style 1"
+local HUD_STYLE = "Style 4"
 local HUD_STYLE_2_ASSETS = {
     UserIcon = "rbxassetid://88517795223986",
     PlaceIcon = "rbxassetid://138047651582987",
@@ -15821,6 +15826,144 @@ local function createHud3(screenGui, player)
     end
 end
 
+local function createHud4(screenGui, player)
+    -- Neverlose-style HUD: dark bar, logo left, name, divider, ping/fps right
+    local frame = Instance.new("Frame")
+    frame.Name = "Container"
+    frame.Position = UDim2.fromOffset(10, 10)
+    frame.Size = UDim2.fromOffset(300, 28)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+    frame.BackgroundTransparency = 0
+    frame.BorderSizePixel = 0
+    frame.ClipsDescendants = true
+    frame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 50, 60)
+    stroke.Transparency = 0
+    stroke.Thickness = 1
+    stroke.Parent = frame
+
+    -- left accent line (blue like neverlose)
+    local accent = Instance.new("Frame")
+    accent.Size = UDim2.fromOffset(2, 28)
+    accent.Position = UDim2.fromOffset(0, 0)
+    accent.BackgroundColor3 = Color3.fromRGB(65, 145, 255)
+    accent.BorderSizePixel = 0
+    accent.Parent = frame
+
+    -- logo icon
+    local logo = Instance.new("ImageLabel")
+    logo.BackgroundTransparency = 1
+    logo.Position = UDim2.fromOffset(8, 7)
+    logo.Size = UDim2.fromOffset(14, 14)
+    logo.Image = HUD_LOGO_IMAGE
+    logo.ImageColor3 = Color3.fromRGB(200, 30, 30)
+    logo.Parent = frame
+
+    -- brand name
+    local brandLabel = Instance.new("TextLabel")
+    brandLabel.BackgroundTransparency = 1
+    brandLabel.Position = UDim2.fromOffset(26, 5)
+    brandLabel.Size = UDim2.fromOffset(80, 18)
+    brandLabel.Font = Enum.Font.GothamBold
+    brandLabel.Text = "Ahmedjan"
+    brandLabel.TextColor3 = Color3.fromRGB(210, 35, 35)
+    brandLabel.TextSize = 11
+    brandLabel.TextXAlignment = Enum.TextXAlignment.Left
+    brandLabel.Parent = frame
+
+    -- divider
+    local div = Instance.new("Frame")
+    div.Size = UDim2.fromOffset(1, 16)
+    div.Position = UDim2.fromOffset(108, 6)
+    div.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    div.BorderSizePixel = 0
+    div.Parent = frame
+
+    -- user label
+    local userLabel = Instance.new("TextLabel")
+    userLabel.BackgroundTransparency = 1
+    userLabel.Position = UDim2.fromOffset(115, 5)
+    userLabel.Size = UDim2.fromOffset(90, 18)
+    userLabel.Font = Enum.Font.Gotham
+    userLabel.Text = player.Name
+    userLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+    userLabel.TextSize = 10
+    userLabel.TextXAlignment = Enum.TextXAlignment.Left
+    userLabel.Parent = frame
+
+    -- divider 2
+    local div2 = Instance.new("Frame")
+    div2.Size = UDim2.fromOffset(1, 16)
+    div2.Position = UDim2.fromOffset(207, 6)
+    div2.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    div2.BorderSizePixel = 0
+    div2.Parent = frame
+
+    -- fps label
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.BackgroundTransparency = 1
+    fpsLabel.Position = UDim2.fromOffset(214, 5)
+    fpsLabel.Size = UDim2.fromOffset(40, 18)
+    fpsLabel.Font = Enum.Font.Gotham
+    fpsLabel.Text = "0 fps"
+    fpsLabel.TextColor3 = Color3.fromRGB(65, 145, 255)
+    fpsLabel.TextSize = 10
+    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fpsLabel.Parent = frame
+
+    -- divider 3
+    local div3 = Instance.new("Frame")
+    div3.Size = UDim2.fromOffset(1, 16)
+    div3.Position = UDim2.fromOffset(256, 6)
+    div3.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    div3.BorderSizePixel = 0
+    div3.Parent = frame
+
+    -- ping label
+    local pingLabel = Instance.new("TextLabel")
+    pingLabel.BackgroundTransparency = 1
+    pingLabel.Position = UDim2.fromOffset(263, 5)
+    pingLabel.Size = UDim2.fromOffset(40, 18)
+    pingLabel.Font = Enum.Font.Gotham
+    pingLabel.Text = "-- ms"
+    pingLabel.TextColor3 = Color3.fromRGB(65, 145, 255)
+    pingLabel.TextSize = 10
+    pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    pingLabel.Parent = frame
+
+    attachHudDrag(frame, frame)
+
+    return function(data)
+        fpsLabel.Text = string.format("%d fps", data.fps)
+        pingLabel.Text = string.format("%s ms", data.ping)
+        userLabel.Text = trimHudText(data.username, 10)
+
+        -- dynamic width
+        local nameW = math.clamp(getHudTextWidth(userLabel.Text, Enum.Font.Gotham, 10) + 6, 60, 100)
+        local fpsW = math.clamp(getHudTextWidth(fpsLabel.Text, Enum.Font.Gotham, 10) + 6, 36, 52)
+        local pingW = math.clamp(getHudTextWidth(pingLabel.Text, Enum.Font.Gotham, 10) + 6, 36, 52)
+
+        userLabel.Size = UDim2.fromOffset(nameW, 18)
+        fpsLabel.Size = UDim2.fromOffset(fpsW, 18)
+        pingLabel.Size = UDim2.fromOffset(pingW, 18)
+
+        local x = 108
+        div.Position = UDim2.fromOffset(x, 6)
+        userLabel.Position = UDim2.fromOffset(x + 7, 5)
+        div2.Position = UDim2.fromOffset(x + 7 + nameW + 4, 6)
+        fpsLabel.Position = UDim2.fromOffset(x + 7 + nameW + 12, 5)
+        div3.Position = UDim2.fromOffset(x + 7 + nameW + 12 + fpsW + 4, 6)
+        pingLabel.Position = UDim2.fromOffset(x + 7 + nameW + 12 + fpsW + 12, 5)
+        frame.Size = UDim2.fromOffset(x + 7 + nameW + 12 + fpsW + 12 + pingW + 10, 28)
+    end
+end
+
 local function createHud()
     local playerService = game:GetService("Players")
     local runService = game:GetService("RunService")
@@ -15838,7 +15981,9 @@ local function createHud()
     HudRuntime.Gui = screenGui
 
     local updateDisplay
-    if HUD_STYLE == "Style 3" then
+    if HUD_STYLE == "Style 4" then
+        updateDisplay = createHud4(screenGui, player)
+    elseif HUD_STYLE == "Style 3" then
         updateDisplay = createHud3(screenGui, player)
     elseif HUD_STYLE == "Style 2" then
         updateDisplay = createHud2(screenGui, player)
@@ -15891,7 +16036,7 @@ end
 
 SettingsBox:AddDropdown("HudStylePreset", {
     Text = "HUD style",
-    Values = { "Style 1", "Style 2", "Style 3" },
+    Values = { "Style 1", "Style 2", "Style 3", "Style 4" },
     Default = HUD_STYLE,
     Callback = function(Value)
         HUD_STYLE = Value
